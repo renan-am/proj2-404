@@ -5,7 +5,7 @@ int main (){
 	printf (" hello world\n");
 
 
-
+	printf (" ola ola\n");
 	return 0;
 }
 
