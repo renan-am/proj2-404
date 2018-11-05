@@ -1,6 +1,26 @@
 #include <stdio.h>
 
 
+int fun(){
+
+}
+
+int func1_5(){
+
+}
+
+int fun2(){
+
+}
+
+
+sdbfhbsdhfbsd
+
+
+int fun3(){
+ return 8
+}
+
 int main (){
 	printf (" hello world\n");
 	printf("qualquer coisa\n");
