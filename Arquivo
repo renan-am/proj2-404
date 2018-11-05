@@ -1,5 +1,13 @@
+#include <stdio.h>
 
 
-olaola
+int main (){
+	printf (" hello world\n");
 
-epafeaeaea
+
+
+	return 0;
+}
+
+
+
