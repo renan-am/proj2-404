@@ -18,8 +18,8 @@
 @    .set MODE_SYSTEM,               0xxx
 
 @ Constantes referentes aos endereços
-    .set USER_ADDRESS,                          0x77812000      @ Endereço do código de usuário
-    .set STACK_POINTER_IRQ,                 0x7E000000      @ Endereço inicial da pilha do modo IRQ
+    .set USER_ADDRESS,              0x77812000      @ Endereço do código de usuário
+    .set STACK_POINTER_IRQ,         0x7E000000      @ Endereço inicial da pilha do modo IRQ
     .set STACK_POINTER_SUPERVISOR,  0x7F000000      @ Endereço inicial da pilha do modo Supervisor
     .set STACK_POINTER_USER,                0x80000000      @ Endereço inicial da pilha do modo Usuário
 
@@ -32,18 +32,18 @@
     .set TZIC_PRIORITY9,            0x424
 
 @ Constantes Referentes ao GPT
-        .set GPT_CR,        0x53FA0000
+    .set GPT_CR,        0x53FA0000
     .set GPT_PR,        0x53FA0004
-    .set GPT_OCR1,  0x53FA0010
+    .set GPT_OCR1,      0x53FA0010
     .set GPT_IR,        0x53FA000C
     .set GPT_SR,        0x53FA0008
     @ verificar o valor plausivel para TIME_SZ
     .set TIME_SZ,   0x100
     
 @ Constantes Referentes ao GPIO
-        .set DR,        0x53F84000
+    .set DR,    0x53F84000
     .set GDIR,  0x53F84004
-        .set PSR,   0x53F84008
+    .set PSR,   0x53F84008
 
 
 
@@ -113,9 +113,13 @@ reset_handler:
     @ Você pode inicializar as pilhas aqui (ou, pelo menos, antes de executar o código do usuário)
         
     ldr sp, =STACK_POINTER_SUPERVISOR
-    @ Trocar para IRQ e inicilizar o SP_IRQ (r13)
-    @ Descobrir como trocar de modo
-    @ push {r0-r12}
+    @ Trocar para IRQ (IRQ/FIQ enabled) e inicilizar o SP_IRQ (r13) 
+    msr CPSR_c, #0b00010010 
+    ldr sp, =STACK_POINTER_IRQ
+    @volta pro modo Supervisor com IRQ/FIQ enabled
+    msr CPSR_c, #0b00010011
+    mov r0, #0
+    
     
 
 @    3) ----------- Configuração dos periféricos (GPT/GPIO) -------------------
@@ -136,6 +140,22 @@ reset_handler:
     ldr r0, =GPT_IR
     mov r1, #1
     str r1, [r0]
+
+
+    @ jogas os bits da tabela 2 no GDIR
+    @ descobrir como jogar os bits
+    @ 0 = entrada
+    @ 1 = saida
+    @ldr r0, =GDIR
+    @ldr r1, =0b01111100000000000011111111111111
+    @str r1, [r0]
+
+    @ldr r2, =0b01111100011000000011111111111111
+    @ldr r3, =0b00000011111111111100000000000000
+    @and r2, r2, r3
+    @mov r2, r2, lsr #14
+
+
 
 @    4) ----------- Configuração do TZIC  -------------------------------------
     @ Liga o controlador de interrupcoes
@@ -168,19 +188,17 @@ reset_handler:
     str r0, [r1, #TZIC_INTCTRL]
         
     @instrucao msr - habilita interrupcoes
-        msr  CPSR_c, #0x13       @ SUPERVISOR mode, IRQ/FIQ enabled
+    msr  CPSR_c, #0x13       @ SUPERVISOR mode, IRQ/FIQ enabled
 
 
-@    5) ----------- Configuração do GPIO -------------------------------------
-            
-      @ jogas os bits da tabela 2 no GDIR
-      @ descobrir como jogar os bits 
-
-@    6) ----------- Execução de código de usuário -----------------------------
+@    5) ----------- Execução de código de usuário -----------------------------
     @ Você pode fazer isso aqui....
         
     @ Descobrir se é assim que faz um pulo
     @ b USER_ADRESS
+    msr CPSR_c, #0b00010000
+    loop:
+        b loop
 
 
 
@@ -188,23 +206,105 @@ reset_handler:
 @   As funções na camada BiCo fazem syscalls que são tratadas por essa rotina
 @   Esta rotina deve, determinar qual syscall foi realizada e realizar alguma ação (escrever nos motores, ler contador de tempo, ....)
 svc_handler:
-    @ tratar PILHA
+    push {r4-r12, lr}
+
   @ checar r7, dependendo do r7, le/escrever o que for necessário
   
   @ read_sonar (21)
-  @ set_motor_speed (20)
-  @ get_time (17)
-  @ set_time (18)
-  
-  
-  movs pc, lr
-  
+    read_sonar:
+        cmp r7, #21
+        bne set_motor_speed
 
+        mov r1, r0
+        mov r0, #-1
+        cmp r1, #15
+        bgt fim_svc
+        cmp r1, #0
+        blt fim_svc
+        mov r0, r1
+
+        ldr r1, =GDIR
+        ldr r2, [r1]
+        mov r0, r0, lsl #26
+        orr r2, r0
+        str r2, [r1]
+
+        @trigger = 1
+        ldr r2, [r1]
+        mov r0, #1
+        mov r0, r0, lsl #30
+        orr r2, r0
+        str r2, [r1]
+
+        @espera pelo menos 10ms
+        mov r3, #0
+        loop_wait:
+            add r3, r3, #1
+            cmp r3, #100
+            ble loop_wait
+
+
+        @trigger = 0
+        mov r0, #0
+        mov r0, r0, lsl #30
+        orr r2, r0
+        str r2, [r1]
+
+        @espera flag = 1
+        mov r3, #0
+        loop_check_flag:
+            ldr r2, [r1]
+            mov r2, r2, lsr #31
+            cmp r2, #1
+            beq fim_check_flag
+
+            add r3, r3, #1
+            cmp r3, #500
+            ble loop_check_flag
+        erro_read_sonar:
+            mov 
+        fim_check_flag:
+
+        ldr r2, [r1]
+        ldr r3, =0b00000011111111111100000000000000
+        and r2, r2, r3
+        mov r2, r2, lsr #14
+        mov r0, r2
+
+
+
+
+
+
+
+        b fim_svc 
+  @ set_motor_speed (20)
+    set_motor_speed:
+        cmp r7, #20
+        bne get_time
+        b fim_svc
+  @ get_time (17)
+    get_time:
+        cmp r7, #17
+        bne set_time
+        b fim_svc
+  @ set_time (18)
+    set_time:
+        cmp r7, #18
+        bne no_svc
+        b fim_svc
+    no_svc:
+    fim_svc:
+
+    pop {r4-r12, lr}
+    movs pc, lr
 
 
 @   Rotina para o tratamento de interrupções IRQ
 @   Sempre que uma interrupção do tipo IRQ acontece, esta rotina é executada. O GPT, quando configurado, gera uma interrupção do tipo IRQ. Neste caso, o contador de tempo pode ser incrementado (este incremento corresponde a 1 unidade de tempo do seu sistema)
 irq_handler:
+    push {r0-r12}
+
     ldr r0, =GPT_SR
     mov r1, #0x1
     str r1, [r0]
@@ -216,7 +316,7 @@ irq_handler:
 
     sub lr, lr, #4
 
-    @pop {r0-r12}
+    pop {r0-r12}
 
     movs pc, lr
 
@@ -225,5 +325,5 @@ irq_handler:
 @@      Seção de Dados                        @@
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @ Nesta seção ficam todas as váriaveis utilizadas para execução do código deste arquivo (.word / .skip)
-
+.data
 counter: .word 0x00000000

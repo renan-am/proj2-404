@@ -1,0 +1,10 @@
+target remote localhost:5000
+#b soul.s:220
+#c
+#p *(int)0x77801800
+#p /t *0x53F84004
+#p /x $sp
+
+
+b soul.s:154
+c
