@@ -118,7 +118,6 @@ reset_handler:
     ldr sp, =STACK_POINTER_IRQ
     @volta pro modo Supervisor com IRQ/FIQ enabled
     msr CPSR_c, #0b00010011
-    mov r0, #0
     
     
 
@@ -143,7 +142,6 @@ reset_handler:
 
 
     @ jogas os bits da tabela 2 no GDIR
-    @ descobrir como jogar os bits
     @ 0 = entrada
     @ 1 = saida
     ldr r0, =GDIR
@@ -194,14 +192,9 @@ reset_handler:
 @    5) ----------- Execução de código de usuário -----------------------------
     @ Você pode fazer isso aqui....
         
-    @ Descobrir se é assim que faz um pulo
-    @ b USER_ADRESS
     msr CPSR_c, #0b00010000
-    loop:
-        mov r0, #10
-        mov r7, #21
-        bl svc_handler
-        b loop
+    ldr r0, =USER_ADDRESS
+    mov pc, r0
 
 
 
@@ -218,17 +211,21 @@ svc_handler:
         cmp r7, #21
         bne set_motor_speed
 
-        mov r1, r0
+				@ checa intervalo do input
+        mov r1, r0 
         mov r0, #-1
         cmp r1, #15
         bgt fim_svc
         cmp r1, #0
-        blt fim_svc
+        blt fim_svc     
         mov r0, r1
 
+        
         ldr r1, =DR
         ldr r2, [r1]
         mov r0, r0, lsl #2
+        ldr r3, =0b11111111111111111111111111000000
+        and r2, r3
         orr r2, r0
         str r2, [r1]
 
@@ -277,21 +274,109 @@ svc_handler:
         mov r2, r2, lsr #6
         mov r0, r2
 
-        b fim_svc 
+        b fim_svc
+        
   @ set_motor_speed (20)
     set_motor_speed:
+    
         cmp r7, #20
-        bne get_time
+				bne get_time
+        
+        check_motor_id:
+        	cmp r0, #0
+        	blt erro_motor_id
+					cmp r0, #1
+          bgt erro_motor_id
+          b check_motor_speed
+          
+        erro_motor_id:
+        	mov r0, #-1
+        	b fim_svc
+        
+        check_motor_speed:
+					cmp r1, #0
+          blt erro_motor_speed
+          cmp r1, #63
+          bgt erro_motor_speed
+          b fim_check_motor
+          
+        erro_motor_speed:
+        	mov r0, #-2
+        	b fim_svc
+        
+        fim_check_motor:
+					
+          
+          motor0:
+          	cmp r0, #0 @motor da direita
+            bne motor1
+            
+            @ zera em DR os campos dos motores
+            ldr r2, =DR
+            ldr r3, [r2]
+            ldr r4, =0b11111110000000111111111111111111
+            and r3, r4
+            str r3, [r2]
+            
+            ldr r2, =DR
+            ldr r3, [r2]
+            mov r1, r1, lsl #1
+            add r1, r1, #1 @adiciona 1 (motor_write) no ultimo bit que é 0 (por causa do lsl)
+            mov r1, r1, lsl #18
+            orr r3, r1
+            str r3, [r2]
+            
+            @ troca o bit write_motor0 de 1 para 0
+            ldr r1, =0b11111111111110111111111111111111
+            and r3, r1
+            str r3, [r2]
+            
+            b fim_svc
+             
+          motor1:
+						cmp r0, #1 @motor da esquerda
+            bne fim_svc
+            
+             @ zera em DR os campos dos motores
+            ldr r2, =DR
+            ldr r3, [r2]
+            ldr r4, =0b00000001111111111111111111111111
+            and r3, r4
+            str r3, [r2]
+            
+            ldr r2, =DR
+            ldr r3, [r2]
+            mov r1, r1, lsl #1
+            add r1, r1, #1 @adiciona 1 (motor_write) no ultimo bit que é 0 (por causa do lsl)
+            mov r1, r1, lsl #25
+            orr r3, r1
+            str r3, [r2]
+            
+            @ troca o bit write_motor1 de 1 para 0
+            ldr r1, =0b11111101111111111111111111111111
+            and r3, r1
+            str r3, [r2]
+  
         b fim_svc
+        
   @ get_time (17)
     get_time:
         cmp r7, #17
         bne set_time
+        
+        ldr r1, =counter
+        str r0, [r1]
+        
         b fim_svc
+        
   @ set_time (18)
     set_time:
         cmp r7, #18
         bne no_svc
+        
+        ldr r1, =counter
+        ldr r0, [r1]
+        
         b fim_svc
     no_svc:
     fim_svc:

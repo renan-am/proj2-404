@@ -8,8 +8,11 @@ target remote localhost:5000
 # b soul.s:236
 # b soul.s:250
 #b soul.s:265
-b soul.s:274
-b soul.s:280
+#b soul.s:274
+#b soul.s:202
+#b soul.s:203
+#b soul.s:208
+
 # c
 # p /t *0x53F84000
 # p /t *0x53F84008
@@ -18,6 +21,6 @@ b soul.s:280
 #p /t *0x53F84000
 #p /t *0x53F84008
 
-c
-p /t *0x53F84000
-c
+#c
+#p /t *0x53F84000
+#c
