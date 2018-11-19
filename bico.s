@@ -11,19 +11,16 @@
 
 
 set_motor_speed:
-  push {r7, lr}
+    push {r7, lr}
+
   
-  ldrb r2, [r0], #1 
+    ldrb r1, [r0, #1] 
+    ldrb r0, [r0]
 
-  ldrb r3, [r0]
-  
-  mov r0, r2
-  mov r1, r3
+    mov r7, #20
+    svc 0x0 
 
-  mov r7, #20
-  svc 0x0
-
-  pop {r7, pc}
+    pop {r7, pc}
 
 
 
