@@ -13,7 +13,7 @@ target remote localhost:5000
 #b soul.s:203
 #b soul.s:208
 
-# c
+c
 # p /t *0x53F84000
 # p /t *0x53F84008
 

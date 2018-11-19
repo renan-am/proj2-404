@@ -240,7 +240,7 @@ svc_handler:
         mov r3, #0
         loop_wait1:
             add r3, r3, #1
-            cmp r3, #0x100
+            cmp r3, #1
             ble loop_wait1
 
 
