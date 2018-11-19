@@ -39,7 +39,7 @@
     .set GPT_SR,        0x53FA0008
     @ verificar o valor plausivel para TIME_SZ
     .set TIME_SZ,   0x100
-    
+
 @ Constantes Referentes ao GPIO
     .set DR,    0x53F84000
     .set GDIR,  0x53F84004
@@ -111,15 +111,15 @@ reset_handler:
 
 @   2) ----------- Inicialização das pilhas modos de operação  ---------------
     @ Você pode inicializar as pilhas aqui (ou, pelo menos, antes de executar o código do usuário)
-        
+
     ldr sp, =STACK_POINTER_SUPERVISOR
-    @ Trocar para IRQ (IRQ/FIQ enabled) e inicilizar o SP_IRQ (r13) 
-    msr CPSR_c, #0b00010010 
+    @ Trocar para IRQ (IRQ/FIQ enabled) e inicilizar o SP_IRQ (r13)
+    msr CPSR_c, #0b00010010
     ldr sp, =STACK_POINTER_IRQ
     @volta pro modo Supervisor com IRQ/FIQ enabled
     msr CPSR_c, #0b00010011
-    
-    
+
+
 
 @    3) ----------- Configuração dos periféricos (GPT/GPIO) -------------------
     @ Você pode configurar os periféricos aqui....
@@ -134,7 +134,7 @@ reset_handler:
 
     ldr r0, =GPT_OCR1
     mov r1, #TIME_SZ
-    str r1, [r0]    
+    str r1, [r0]
 
     ldr r0, =GPT_IR
     mov r1, #1
@@ -145,7 +145,7 @@ reset_handler:
     @ 0 = entrada
     @ 1 = saida
     ldr r0, =GDIR
-    ldr r1, =0b11111111111111000000000000111110     
+    ldr r1, =0b11111111111111000000000000111110
     str r1, [r0]
 
     @ldr r2, =0b01111100011000000011111111111111
@@ -184,16 +184,17 @@ reset_handler:
     @ Habilita o controlador de interrupcoes
     mov r0, #1
     str r0, [r1, #TZIC_INTCTRL]
-        
+
     @instrucao msr - habilita interrupcoes
     msr  CPSR_c, #0x13       @ SUPERVISOR mode, IRQ/FIQ enabled
 
 
 @    5) ----------- Execução de código de usuário -----------------------------
     @ Você pode fazer isso aqui....
-        
+
     msr CPSR_c, #0b00010000
     ldr r0, =USER_ADDRESS
+    ldr sp, =STACK_POINTER_USER
     mov pc, r0
 
 
@@ -205,22 +206,22 @@ svc_handler:
     push {r4-r12, lr}
 
   @ checar r7, dependendo do r7, le/escrever o que for necessário
-  
+
   @ read_sonar (21)
     read_sonar:
         cmp r7, #21
         bne set_motor_speed
 
 				@ checa intervalo do input
-        mov r1, r0 
+        mov r1, r0
         mov r0, #-1
         cmp r1, #15
         bgt fim_svc
         cmp r1, #0
-        blt fim_svc     
+        blt fim_svc
         mov r0, r1
 
-        
+
         ldr r1, =DR
         ldr r2, [r1]
         mov r0, r0, lsl #2
@@ -240,7 +241,7 @@ svc_handler:
         mov r3, #0
         loop_wait1:
             add r3, r3, #1
-            cmp r3, #1
+            cmp r3, #100
             ble loop_wait1
 
 
@@ -275,49 +276,49 @@ svc_handler:
         mov r0, r2
 
         b fim_svc
-        
+
   @ set_motor_speed (20)
     set_motor_speed:
-    
+
         cmp r7, #20
 				bne get_time
-        
+
         check_motor_id:
         	cmp r0, #0
         	blt erro_motor_id
 					cmp r0, #1
           bgt erro_motor_id
           b check_motor_speed
-          
+
         erro_motor_id:
         	mov r0, #-1
         	b fim_svc
-        
+
         check_motor_speed:
 					cmp r1, #0
           blt erro_motor_speed
           cmp r1, #63
           bgt erro_motor_speed
           b fim_check_motor
-          
+
         erro_motor_speed:
         	mov r0, #-2
         	b fim_svc
-        
+
         fim_check_motor:
-					
-          
+
+
           motor0:
           	cmp r0, #0 @motor da direita
             bne motor1
-            
+
             @ zera em DR os campos dos motores
             ldr r2, =DR
             ldr r3, [r2]
             ldr r4, =0b11111110000000111111111111111111
             and r3, r4
             str r3, [r2]
-            
+
             ldr r2, =DR
             ldr r3, [r2]
             mov r1, r1, lsl #1
@@ -325,25 +326,25 @@ svc_handler:
             mov r1, r1, lsl #18
             orr r3, r1
             str r3, [r2]
-            
+
             @ troca o bit write_motor0 de 1 para 0
             ldr r1, =0b11111111111110111111111111111111
             and r3, r1
             str r3, [r2]
-            
+
             b fim_svc
-             
+
           motor1:
 						cmp r0, #1 @motor da esquerda
             bne fim_svc
-            
+
              @ zera em DR os campos dos motores
             ldr r2, =DR
             ldr r3, [r2]
             ldr r4, =0b00000001111111111111111111111111
             and r3, r4
             str r3, [r2]
-            
+
             ldr r2, =DR
             ldr r3, [r2]
             mov r1, r1, lsl #1
@@ -351,32 +352,32 @@ svc_handler:
             mov r1, r1, lsl #25
             orr r3, r1
             str r3, [r2]
-            
+
             @ troca o bit write_motor1 de 1 para 0
             ldr r1, =0b11111101111111111111111111111111
             and r3, r1
             str r3, [r2]
-  
+
         b fim_svc
-        
+
   @ get_time (17)
     get_time:
         cmp r7, #17
         bne set_time
-        
+
         ldr r1, =counter
         str r0, [r1]
-        
+
         b fim_svc
-        
+
   @ set_time (18)
     set_time:
         cmp r7, #18
         bne no_svc
-        
+
         ldr r1, =counter
         ldr r0, [r1]
-        
+
         b fim_svc
     no_svc:
     fim_svc:
