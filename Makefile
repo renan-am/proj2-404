@@ -9,3 +9,7 @@ disk.img: faz_nada soul
 
 gdb:
 	arm-eabi-gdb soul
+clean:
+	rm disk.img
+	rm soul
+	rm soul.o

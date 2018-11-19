@@ -146,9 +146,9 @@ reset_handler:
     @ descobrir como jogar os bits
     @ 0 = entrada
     @ 1 = saida
-    @ldr r0, =GDIR
-    @ldr r1, =0b01111100000000000011111111111111
-    @str r1, [r0]
+    ldr r0, =GDIR
+    ldr r1, =0b11111111111111000000000000111110     
+    str r1, [r0]
 
     @ldr r2, =0b01111100011000000011111111111111
     @ldr r3, =0b00000011111111111100000000000000
@@ -198,6 +198,9 @@ reset_handler:
     @ b USER_ADRESS
     msr CPSR_c, #0b00010000
     loop:
+        mov r0, #10
+        mov r7, #21
+        bl svc_handler
         b loop
 
 
@@ -223,59 +226,56 @@ svc_handler:
         blt fim_svc
         mov r0, r1
 
-        ldr r1, =GDIR
+        ldr r1, =DR
         ldr r2, [r1]
-        mov r0, r0, lsl #26
+        mov r0, r0, lsl #2
         orr r2, r0
         str r2, [r1]
 
         @trigger = 1
         ldr r2, [r1]
         mov r0, #1
-        mov r0, r0, lsl #30
+        mov r0, r0, lsl #1
         orr r2, r0
         str r2, [r1]
 
         @espera pelo menos 10ms
         mov r3, #0
-        loop_wait:
+        loop_wait1:
             add r3, r3, #1
-            cmp r3, #100
-            ble loop_wait
+            cmp r3, #0x100
+            ble loop_wait1
 
 
         @trigger = 0
-        mov r0, #0
-        mov r0, r0, lsl #30
-        orr r2, r0
+        ldr r0, =0b11111111111111111111111111111101
+        and r2, r0
         str r2, [r1]
+
 
         @espera flag = 1
         mov r3, #0
+        ldr r1, =DR
+        ldr r4, =0b00000000000000000000000000000001
         loop_check_flag:
             ldr r2, [r1]
-            mov r2, r2, lsr #31
+            and r2, r4
             cmp r2, #1
             beq fim_check_flag
 
             add r3, r3, #1
-            cmp r3, #500
+            cmp r3, #0x100
             ble loop_check_flag
         erro_read_sonar:
-            mov 
+            mov r0, #-1
+            b fim_svc
         fim_check_flag:
 
         ldr r2, [r1]
-        ldr r3, =0b00000011111111111100000000000000
+        ldr r3, =0b00000000000000111111111111000000
         and r2, r2, r3
-        mov r2, r2, lsr #14
+        mov r2, r2, lsr #6
         mov r0, r2
-
-
-
-
-
-
 
         b fim_svc 
   @ set_motor_speed (20)

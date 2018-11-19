@@ -6,6 +6,7 @@ if [ -z "$1" ]
 fi
 
 
+make clean
 make disk.img &&
 xfce4-terminal -x bash -c "player /home/mc404/usr/worlds_mc404/$NAME.cfg" &&
 sleep 3 &&

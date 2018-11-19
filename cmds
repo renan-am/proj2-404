@@ -5,6 +5,19 @@ target remote localhost:5000
 #p /t *0x53F84004
 #p /x $sp
 
+# b soul.s:236
+# b soul.s:250
+#b soul.s:265
+b soul.s:274
+b soul.s:280
+# c
+# p /t *0x53F84000
+# p /t *0x53F84008
 
-b soul.s:154
+#c
+#p /t *0x53F84000
+#p /t *0x53F84008
+
+c
+p /t *0x53F84000
 c
