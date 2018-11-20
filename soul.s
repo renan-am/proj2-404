@@ -38,7 +38,7 @@
     .set GPT_IR,        0x53FA000C
     .set GPT_SR,        0x53FA0008
     @ verificar o valor plausivel para TIME_SZ
-    .set TIME_SZ,   0x100
+    .set TIME_SZ,   0x5
 
 @ Constantes Referentes ao GPIO
     .set DR,    0x53F84000
@@ -365,8 +365,13 @@ svc_handler:
         cmp r7, #17
         bne set_time
 
+        @ldr r2, =temp
+        @ldr r3, [r2]
+        @add r3, r3, #1
+        @str r3, [r2]
+
         ldr r1, =counter
-        str r0, [r1]
+        ldr r0, [r1]
 
         b fim_svc
 
@@ -376,7 +381,7 @@ svc_handler:
         bne no_svc
 
         ldr r1, =counter
-        ldr r0, [r1]
+        str r0, [r1]
 
         b fim_svc
     no_svc:
@@ -413,3 +418,4 @@ irq_handler:
 @ Nesta seção ficam todas as váriaveis utilizadas para execução do código deste arquivo (.word / .skip)
 .data
 counter: .word 0x00000000
+temp: .word 0x0

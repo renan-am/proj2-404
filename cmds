@@ -1,19 +1,39 @@
 target remote localhost:5000
-#b soul.s:220
+b ronda.c:33
+c
 #c
 #p *(int)0x77801800
 #p /t *0x53F84004
 #p /x $sp
 
-# b soul.s:236
-# b soul.s:250
+#c
+
+#b soul.s:371
+# b soul.s:400
+# c
+# p /d *0x77801800
+# p /d *0x77801804
+# c
+# p /d *0x77801800
+# p /d *0x77801804
+# c
+# p /d *0x77801800
+# p /d *0x77801804
+# c
+# p /d *0x77801800
+# p /d *0x77801804
+# c
+# p /d *0x77801800
+# p /d *0x77801804
+
+#b soul.s:250
 #b soul.s:265
 #b soul.s:274
 #b soul.s:202
 #b soul.s:203
 #b soul.s:276
 
-c
+#c
 # p /t *0x53F84000
 # p /t *0x53F84008
 
