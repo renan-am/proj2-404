@@ -38,7 +38,7 @@
     .set GPT_IR,        0x53FA000C
     .set GPT_SR,        0x53FA0008
     @ verificar o valor plausivel para TIME_SZ
-    .set TIME_SZ,   0x5
+    .set TIME_SZ,   0xA
 
 @ Constantes Referentes ao GPIO
     .set DR,    0x53F84000

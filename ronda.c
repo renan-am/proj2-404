@@ -1,24 +1,26 @@
 #include "api_robot.h"
 
 #define SPEED 20
-#define LIMIAR 100
+#define LIMIAR 1000
 #define TIME 1
 
 void virar_direita(motor_cfg_t *motor0, motor_cfg_t *motor1);
 int checar_parede();
 void evitar_parede(motor_cfg_t *motor0, motor_cfg_t *motor1);
 
+//15 : 1700000
+
 int _start(int argv, char** argc) {
   int a = 0;
   motor_cfg_t motor0, motor1;
   motor0.id = 0;
-  motor0.speed = 15;
+  motor0.speed = SPEED;
   motor1.id = 1;
-  motor1.speed = 15;  
+  motor1.speed = SPEED;  
   a = set_motor_speed(&motor0);
   a = set_motor_speed(&motor1);
 
-  virar_direita(&motor0, &motor1);
+  //virar_direita(&motor0, &motor1);
   //while (1==1) {
 
   //}
@@ -31,15 +33,14 @@ int _start(int argv, char** argc) {
     
     i = get_time();
     if (i >= j*TIME){
-        if (j >= 50){
-            j == 1;
-        }
-        virar_direita(&motor0, &motor1);
-        set_time(0);
-        continue;
+      if (j >= 50){
+          j = 1;
+      }
+      virar_direita(&motor0, &motor1);
+      set_time(0);
+      j++;
     }
-    j++;
-    //evitar_parede(&motor0, &motor1);
+    evitar_parede(&motor0, &motor1);
   }
 
     return 0;
@@ -54,14 +55,14 @@ void virar_direita(motor_cfg_t *motor0, motor_cfg_t *motor1){
     motor1->speed = 5;
     a = set_motor_speed(motor0);
     a = set_motor_speed(motor1);
-    //while (j <= i+5000){
+    //while (j <= i+4000){
     //    j = get_time();
     //}
-    for (j = 0; j < 19000000; j++){        
+    for (j = 0; j < 5300000; j++){        
     }
 
-    motor0->speed = 15;
-    motor1->speed = 15;
+    motor0->speed = SPEED;
+    motor1->speed = SPEED;
 
     a = set_motor_speed(motor0);
     a = set_motor_speed(motor1);

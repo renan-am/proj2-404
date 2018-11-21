@@ -1,5 +1,5 @@
 target remote localhost:5000
-b ronda.c:33
+#b ronda.c:33
 c
 #c
 #p *(int)0x77801800
