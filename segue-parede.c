@@ -7,11 +7,13 @@
 void virar_esquerda(motor_cfg_t *motor0, motor_cfg_t *motor1);
 int checar_parede();
 void seguir_parede(motor_cfg_t *motor0, motor_cfg_t *motor1);
-
-//15 : 1700000
-//motor0 direita
-//motor1 esquerda
-
+/*
+passos do código:
+  1: inicia o motor
+  2: roda o loop checar parede até encontrar uma parede
+  3: chama virar_esquerda que virará até deixar a parede na direita
+  4: chama seguir parede que fazendo curvas pra direita e esquerda, fará o robo seguir a parede
+*/
 
 int _start(int argv, char** argc) {
   int a = 0;
@@ -35,29 +37,7 @@ int _start(int argv, char** argc) {
   seguir_parede(&motor0, &motor1);
   return 0;
 }
-/*
-void seguir_parede(motor_cfg_t *motor0, motor_cfg_t *motor1){
-    int a;
-    //int i = get_time(); 
-    int j = 0;
 
-    motor0->speed = 0;
-    motor1->speed = 5;
-    a = set_motor_speed(motor0);
-    a = set_motor_speed(motor1);
-    //while (j <= i+4000){
-    //    j = get_time();
-    //}
-    for (j = 0; j < 5300000; j++){        
-    }
-
-    motor0->speed = SPEED;
-    motor1->speed = SPEED;
-
-    a = set_motor_speed(motor0);
-    a = set_motor_speed(motor1);
-}
-*/
 void virar_esquerda(motor_cfg_t *motor0, motor_cfg_t *motor1){
     int a;
      int sensor7 = 0, sensor8 = 0;
@@ -67,9 +47,7 @@ void virar_esquerda(motor_cfg_t *motor0, motor_cfg_t *motor1){
     motor1->speed = 0;
     a = set_motor_speed(motor0);
     a = set_motor_speed(motor1);
-    //while (j <= i+4000){
-    //    j = get_time();
-    //}
+
     while (1 == 1){
       sensor7 = read_sonar(7);
       sensor8 = read_sonar(8);
@@ -104,8 +82,6 @@ int checar_parede(){
 
     return 0;
 }
-
-
 
 
 void seguir_parede(motor_cfg_t *motor0, motor_cfg_t *motor1){
