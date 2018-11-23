@@ -1,4 +1,3 @@
-
 @ Este arquivo é segmentado 4 partes (questão de legibilidade)
 @   * Seção para declaração de contantes    : Onde as contantes são declaradas
 @   * Seção do vetor de interrupções        : Código referente ao vetor de interrupções
@@ -122,7 +121,14 @@ reset_handler:
 
 
 @    3) ----------- Configuração dos periféricos (GPT/GPIO) -------------------
-    @ Você pode configurar os periféricos aqui....
+
+
+    @ O trecho abaixo é responsável por configurar os registradores do GPT
+    @ com os respectivos valores para habilitar e configurar os periféricos.
+    @ O procedimento consiste em:
+    @ 1 - Carregar o endereço do registrador em questão
+    @ 2 - Carregar o valor hexadecimal que habilita a função do periférico
+    @ 3 - Armazenar o valor no registrador
 
     ldr r0, =GPT_CR
     mov r1, #0x00000041
@@ -141,17 +147,12 @@ reset_handler:
     str r1, [r0]
 
 
-    @ jogas os bits da tabela 2 no GDIR
+    @ Configura os bits da Tabela 2 no GDIR
     @ 0 = entrada
     @ 1 = saida
     ldr r0, =GDIR
     ldr r1, =0b11111111111111000000000000111110
     str r1, [r0]
-
-    @ldr r2, =0b01111100011000000011111111111111
-    @ldr r3, =0b00000011111111111100000000000000
-    @and r2, r2, r3
-    @mov r2, r2, lsr #14
 
 
 
@@ -190,11 +191,18 @@ reset_handler:
 
 
 @    5) ----------- Execução de código de usuário -----------------------------
-    @ Você pode fazer isso aqui....
 
+    @ Chamada da instrução msr para habilitar o modo de usuário com interrupções
     msr CPSR_c, #0b00010000
+
+    @ Carrega em r0 o endereço inicial do código de usuário
     ldr r0, =USER_ADDRESS
+
+    @ Carrega em sp o endereço inicial da pilha do código de usuário
     ldr sp, =STACK_POINTER_USER
+
+    @ Indica que a execução do código (pc) deve continuar
+    @ no endereço inicial do código de usuário
     mov pc, r0
 
 
@@ -205,14 +213,14 @@ reset_handler:
 svc_handler:
     push {r4-r12, lr}
 
-  @ checar r7, dependendo do r7, le/escrever o que for necessário
-
   @ read_sonar (21)
     read_sonar:
+        @ O primeiro passo é verificar se o valor passado em r7
+        @ para chamada de syscall é o da read_sonar (21)
         cmp r7, #21
         bne set_motor_speed
 
-				@ checa intervalo do input
+				@ Então, checamos se o input está no intervalo permitido
         mov r1, r0
         mov r0, #-1
         cmp r1, #15
@@ -221,7 +229,8 @@ svc_handler:
         blt fim_svc
         mov r0, r1
 
-
+        @ Aqui, configuramos com o auxílio de uma máscara os bits
+        @ dos pinos 0 a 5 do GPIO, mantendo o status dos outros bits.
         ldr r1, =DR
         ldr r2, [r1]
         mov r0, r0, lsl #2
@@ -230,14 +239,14 @@ svc_handler:
         orr r2, r0
         str r2, [r1]
 
-        @trigger = 1
+        @ Nesse passo, modificamos trigger = 1
         ldr r2, [r1]
         mov r0, #1
         mov r0, r0, lsl #1
         orr r2, r0
         str r2, [r1]
 
-        @espera pelo menos 10ms
+        @ Esperamos pelo menos 10ms
         mov r3, #0
         loop_wait1:
             add r3, r3, #1
@@ -245,13 +254,15 @@ svc_handler:
             ble loop_wait1
 
 
-        @trigger = 0
+        @ E modificamos apenas trigger = 0 com uma máscara
         ldr r0, =0b11111111111111111111111111111101
         and r2, r0
         str r2, [r1]
 
 
-        @espera flag = 1
+        @ No laço abaixo, utilizamos uma máscara para alterar apenas
+        @ flag = 0, e então esperamos o tempo necessários para que
+        @ ela seja modificada para 1, concluindo a checagem
         mov r3, #0
         ldr r1, =DR
         ldr r4, =0b00000000000000000000000000000001
@@ -269,6 +280,9 @@ svc_handler:
             b fim_svc
         fim_check_flag:
 
+        @ Finalmente, com outra máscara, modificamos o dado lido
+        @ para torná-lo mais significativo, adequando aos pinos do GPIO.
+        @ Movemos para r0 o valor final, de acordo com o esperado na svc
         ldr r2, [r1]
         ldr r3, =0b00000000000000111111111111000000
         and r2, r2, r3
@@ -279,10 +293,13 @@ svc_handler:
 
   @ set_motor_speed (20)
     set_motor_speed:
-
+        @ O primeiro passo é verificar se o valor passado em r7
+        @ para chamada de syscall é o da set_motor_speed (20)
         cmp r7, #20
 				bne get_time
 
+        @ Então checamos se o input que define o motor
+        @ está no intervalo permitido.
         check_motor_id:
         	cmp r0, #0
         	blt erro_motor_id
@@ -294,6 +311,8 @@ svc_handler:
         	mov r0, #-1
         	b fim_svc
 
+        @ Também checamos se o input que define a nova velocidade
+        @ está no intervalo permitido.
         check_motor_speed:
 					cmp r1, #0
           blt erro_motor_speed
@@ -309,16 +328,20 @@ svc_handler:
 
 
           motor0:
+            @ Verificamos se o parâmetro passado em r0 indica o
+            @ motor da direita para ser modificado.
           	cmp r0, #0 @motor da direita
             bne motor1
 
-            @ zera em DR os campos dos motores
+            @ Zera em DR apenas os campos dos motores com o
+            @ auxílio de uma máscara.
             ldr r2, =DR
             ldr r3, [r2]
             ldr r4, =0b11111110000000111111111111111111
             and r3, r4
             str r3, [r2]
 
+            @ Agora, modificamos o pino que habilita escrita de velocidade no motor.
             ldr r2, =DR
             ldr r3, [r2]
             mov r1, r1, lsl #1
@@ -327,7 +350,8 @@ svc_handler:
             orr r3, r1
             str r3, [r2]
 
-            @ troca o bit write_motor0 de 1 para 0
+            @ Modificamos apenas o bit write_motor0 de 1 para 0
+            @ Efetivando a escrita da nova velocidade
             ldr r1, =0b11111111111110111111111111111111
             and r3, r1
             str r3, [r2]
@@ -335,10 +359,16 @@ svc_handler:
             b fim_svc
 
           motor1:
+            @ Verificamos se o parâmetro passado em r0 indica o
+            @ motor da esquerda para ser modificado.
+
+            @ O procedimento abaixo é feito de forma análoga
+            @ ao descrito no motor acima.
+
 						cmp r0, #1 @motor da esquerda
             bne fim_svc
 
-             @ zera em DR os campos dos motores
+            @ Zera em DR os campos dos motores
             ldr r2, =DR
             ldr r3, [r2]
             ldr r4, =0b00000001111111111111111111111111
@@ -353,7 +383,7 @@ svc_handler:
             orr r3, r1
             str r3, [r2]
 
-            @ troca o bit write_motor1 de 1 para 0
+            @ Troca o bit write_motor1 de 1 para 0
             ldr r1, =0b11111101111111111111111111111111
             and r3, r1
             str r3, [r2]
@@ -362,14 +392,14 @@ svc_handler:
 
   @ get_time (17)
     get_time:
+        @ O primeiro passo é verificar se o valor passado em r7
+        @ para chamada de syscall é o da get_time (17)
         cmp r7, #17
         bne set_time
 
-        @ldr r2, =temp
-        @ldr r3, [r2]
-        @add r3, r3, #1
-        @str r3, [r2]
-
+        @ O processo dessa svc consiste basicamente em carregar em r1
+        @ o valor do endereço do tempo de sistema armazenado em counter
+        @ e em seguida, move-lo para r0 para o retorno de acordo com a svc
         ldr r1, =counter
         ldr r0, [r1]
 
@@ -377,9 +407,14 @@ svc_handler:
 
   @ set_time (18)
     set_time:
+        @ O primeiro passo é verificar se o valor passado em r7
+        @ para chamada de syscall é o da set_time (18)
         cmp r7, #18
         bne no_svc
 
+        @ Aqui, também carregamos em r1 o valor do endereço do tempo de sistema
+        @ armazenado em counter e em seguida, modificamos o próprio counter
+        @ com o valor passado em r0 como parâmetro, de acordo com a svc
         ldr r1, =counter
         str r0, [r1]
 
@@ -388,6 +423,9 @@ svc_handler:
     fim_svc:
 
     pop {r4-r12, lr}
+
+    @ Após execução da respectiva syscall, utilizamos o comando especial
+    @ abaixo para retornar ao fluxo do processo normal
     movs pc, lr
 
 
